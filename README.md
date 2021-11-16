@@ -1,2 +1,2 @@
 # identity_ms
-microservicio creado en ruby
+microservicio que se encargará de inicio sesion bajo otras cuentas de redes sociales. Lenguaje Ruby
