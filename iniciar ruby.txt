@@ -1,0 +1,19 @@
+gem install bundle
+bundle init
+**
+	en el archivo creado en la ultima linea escribir
+	gem "sinatra" // es para usar el framework de sinatra
+**
+bundle install
+**
+  crear el archivo
+  ejemlpo.rb
+  ** // en ese mismo archivo 
+  **
+**
+
+gem install thin
+gem install puma
+gem install reel
+gem install http
+gem install webrick
