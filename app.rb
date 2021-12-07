@@ -32,121 +32,69 @@ end
 set :signing_key, signing_key
 set :verify_key, verify_key
 
-# enable sessions which will be our default for storing the token
-enable :sessions
-
-#this is to encrypt the session, but not really necessary just for token because we aren't putting any sensitive info in there
-set :session_secret, 'super secret 2' 
-
-helpers do
-
-  # protected just does a redirect if we don't have a valid token
-  def protected!
-    return if authorized?
-    redirect to('/login')
-  end
-
-  # helper to extract the token from the session, header or request param
-  # if we are building an api, we would obviously want to handle header or request param
-  def extract_token
-    # check for the access_token header
-    token = request.env["access_token"]
-    
-    if token
-      return token
-    end
-
-    # or the form parameter _access_token
-    token = request["access_token"]
-
-    if token
-      return token
-    end
-
-    # or check the session for the access_token
-    token = session["access_token"]
-
-    if token
-      return token
-    end
-
-    return nil
-  end
-
-  # check the token to make sure it is valid with our public key
-  def authorized?
-    @token = extract_token
-
-    if @token.nil?
-      session["message"] = "No JWT found in session.  Please log in."
-      return false
-    end
-
-    begin
-      @payload, @header = JWT.decode(@token, settings.verify_key, true, { algorithm: 'RS256'} )
-
-      @exp = @header["exp"]
-
-      # check to see if the exp is set (we don't accept forever tokens)
-      if @exp.nil?
-        session["message"] = "No exp set on JWT token."
-        return false
-      end
-
-      @exp = Time.at(@exp.to_i)
-
-      # make sure the token hasn't expired
-      if Time.now > @exp
-        session["message"] = "JWT token expired."
-        return false
-      end
-
-      @user_id = @payload["user_id"]
-    rescue JWT::DecodeError => e
-      session["message"] = "JWT decode error: #{e.message}"
-      return false
-    end
-  end
-end
 
 get '/' do
-  protected!
+  @token = ""
   mess = {token:@token}
   return mess.to_json
 end
-
-get '/login' do
-
-  @message = session["message"]
-  session.delete("message")
-end
-
-get '/logout' do
-  session["access_token"] = nil
-  redirect to("/")
-end
-
 post '/login?' do
-  # check the username and password
-  # you would use some sort of User record here to verify the credentials
+
   if params["username"] == "username" && params["password"] == "password"
-    # if the user/pass credentials are valid, lets issue a JSON Web Token:
-    # normally you might put the user_id in payload, or some other identifying 
-    # attributes that we can use to get the current authenticated user's identity
-    # on future visists to the site
 
     headers = {
-      exp: Time.now.to_i + 20 #expire in 20 seconds
+      exp: Time.now.to_i + 60 #expire in 1 min
     }
 
     @token = JWT.encode({user_id: 123456}, settings.signing_key, "RS256", headers)
-    
-    session["access_token"] = @token
 
-    redirect to("/")
+    mess = {token:@token}
+    return mess.to_json
   else
-    @message = "Username/Password failed."
+    @token = "Username/Password failed."
+    return mess.to_json
   end
 end
 
-# sacado de :) https://github.com/nickdufresne/jwt-sinatra-example
+
+get '/logout?'do
+
+    if params["token"].nil?
+      mess = {token:"token null"}
+      return mess.to_json
+    end
+    @payload, @header = JWT.decode(params["token"], settings.verify_key, true, { algorithm: 'RS256'} )
+    @exp = @header["exp"]
+
+      # check to see if the exp is set (we don't accept forever tokens)
+    if @exp.nil?
+      mess = {token:"No exp set on JWT token."}
+      return mess.to_json
+    end
+
+    @exp = Time.at(@exp.to_i)
+
+      # make sure the token hasn't expired
+    if Time.now > @exp
+      mess = {token:"JWT token expired."}
+      return mess.to_json
+    end
+    begin
+      @user_id = @payload["user_id"]
+      
+      if @user_id.to_s == "123456"
+        mess = {token: @user_id.to_s}
+        return mess.to_json
+        else 
+          mess = {token: "rejected token."}
+        return mess.to_json
+      end
+    rescue OpenSSL::PKey::PKeyError, JWT::DecodeError, JWT::VerificationError => e
+      mess = {token: "rejected token."}
+    ensure 
+      mess = {token: "rejected token."}
+    end
+    return mess.to_json
+  end
+
+# fuente https://github.com/nickdufresne/jwt-sinatra-example
