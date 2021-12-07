@@ -19,6 +19,8 @@ verify_key_path = File.expand_path("../app.rsa.pub", __FILE__)
 signing_key = ""
 verify_key = ""
 
+
+
 File.open(signing_key_path) do |file|
   signing_key = OpenSSL::PKey.read(file)
 end
@@ -109,7 +111,8 @@ end
 
 get '/' do
   protected!
-  return @token
+  mess = {token:@token}
+  return mess.to_json
 end
 
 get '/login' do
