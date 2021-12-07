@@ -10,8 +10,8 @@ require 'jwt'
 # first we load up the private and public keys that we will use to sign and verify our JWT token
 # using RS256 algo
 ######
-
-set :port,3005
+set :port,ENV['PORT'] || 8080
+set :bind,"0.0.0.0"
 
 signing_key_path = File.expand_path("../app.rsa", __FILE__)
 verify_key_path = File.expand_path("../app.rsa.pub", __FILE__)
